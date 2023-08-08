@@ -16,7 +16,21 @@
 
 #if !defined(NXPLOG__H_INCLUDED)
 #define NXPLOG__H_INCLUDED
+
+#ifndef OS_CHROMEOS
+#include <android-base/stringprintf.h>
+#include <cutils/properties.h>
 #include <log/log.h>
+using android::base::StringPrintf;
+#else
+#include <base/logging.h>
+#include <base/strings/stringprintf.h>
+#include <brillo/flag_helper.h>
+#include <brillo/syslog_logging.h>
+#include <cstring>
+#include <stdint.h>
+using base::StringPrintf;
+#endif //OS_CHROMEOS
 
 typedef struct uci_log_level {
   uint8_t global_log_level;
@@ -90,6 +104,8 @@ extern const char* NXPLOG_ITEM_TML;    /* Android logging tag for NxpTml    */
 extern const char* NXPLOG_ITEM_HCPX; /* Android logging tag for NxpHcpX   */
 extern const char* NXPLOG_ITEM_HCPR; /* Android logging tag for NxpHcpR   */
 #endif                               /*NXP_HCI_REQ*/
+
+#ifndef OS_CHROMEOS
 
 /* ######################################## Defines used for Logging data
  * ######################################### */
@@ -308,6 +324,234 @@ extern const char* NXPLOG_ITEM_HCPR; /* Android logging tag for NxpHcpR   */
 #endif /* Logging APIs used by NxpHcpR module */
 #endif /* NXP_HCI_REQ */
 
+#else  // OS_CHROMEOS
+#define ALOGD(...) LOG(INFO) << StringPrintf(__VA_ARGS__)
+#define ALOGE(...) LOG(ERROR) << StringPrintf(__VA_ARGS__)
+
+#define ALOGD_IF(cond, ...) \
+  {                                   \
+    if(cond)                          \
+    ALOGD(__VA_ARGS__);               \
+  }
+/* ######################################## Defines used for Logging data
+ * ######################################### */
+#ifdef NXP_VRBS_REQ
+#define NXPLOG_FUNC_ENTRY(COMP) \
+  LOG(VERBOSE) << COMP << " " << StringPrintf("+:%s",(__func__))
+#define NXPLOG_FUNC_EXIT(COMP) \
+  LOG(VERBOSE) << COMP << " " << StringPrintf("-:%s", (__func__))
+#endif /*NXP_VRBS_REQ*/
+
+/* ################################################################################################################
+ */
+/* ######################################## Logging APIs of actual modules
+ * ######################################## */
+/* ################################################################################################################
+ */
+/* Logging APIs used by NxpExtns module */
+#if (ENABLE_EXTNS_TRACES == TRUE)
+#define NXPLOG_EXTNS_D(...)                                        \
+  {                                                                \
+    if ((uwb_debug_enabled) ||                                     \
+        (gLog_level.extns_log_level >= NXPLOG_LOG_DEBUG_LOGLEVEL)) \
+      LOG(INFO) << NXPLOG_ITEM_EXTNS << " " << StringPrintf(__VA_ARGS__);  \
+  }
+#define NXPLOG_EXTNS_W(...)                                       \
+  {                                                               \
+    if ((uwb_debug_enabled) ||                                    \
+        (gLog_level.extns_log_level >= NXPLOG_LOG_WARN_LOGLEVEL)) \
+      LOG(WARNING) << NXPLOG_ITEM_EXTNS << " " << StringPrintf(__VA_ARGS__);  \
+  }
+#define NXPLOG_EXTNS_E(...)                                       \
+  {                                                               \
+    if (gLog_level.extns_log_level >= NXPLOG_LOG_ERROR_LOGLEVEL)  \
+      LOG(ERROR) << NXPLOG_ITEM_EXTNS << " " << StringPrintf(__VA_ARGS__); \
+  }
+#else
+#define NXPLOG_EXTNS_D(...)
+#define NXPLOG_EXTNS_W(...)
+#define NXPLOG_EXTNS_E(...)
+#endif /* Logging APIs used by NxpExtns module */
+
+/* Logging APIs used by NxpUciHal module */
+#if (ENABLE_HAL_TRACES == TRUE)
+#define NXPLOG_UCIHAL_D(...)                                       \
+  {                                                                \
+    if ((uwb_debug_enabled) ||                                     \
+        (gLog_level.hal_log_level >= NXPLOG_LOG_DEBUG_LOGLEVEL))   \
+      LOG(INFO) << NXPLOG_ITEM_UCIHAL << " " << StringPrintf(__VA_ARGS__); \
+  }
+#define NXPLOG_UCIHAL_W(...)                                      \
+  {                                                               \
+    if ((uwb_debug_enabled) ||                                    \
+        (gLog_level.hal_log_level >= NXPLOG_LOG_WARN_LOGLEVEL))   \
+      LOG(WARNING) << NXPLOG_ITEM_UCIHAL << " " << StringPrintf(__VA_ARGS__); \
+  }
+#define NXPLOG_UCIHAL_E(...)                                       \
+  {                                                                \
+    if (gLog_level.hal_log_level >= NXPLOG_LOG_ERROR_LOGLEVEL)     \
+      LOG(ERROR) << NXPLOG_ITEM_UCIHAL << " " << StringPrintf(__VA_ARGS__); \
+  }
+#else
+#define NXPLOG_UCIHAL_D(...)
+#define NXPLOG_UCIHAL_W(...)
+#define NXPLOG_UCIHAL_E(...)
+#endif /* Logging APIs used by HAL module */
+
+/* Logging APIs used by NxpUciX module */
+#if (ENABLE_UCIX_TRACES == TRUE)
+#define NXPLOG_UCIX_D(...)                                        \
+  {                                                               \
+    if ((uwb_debug_enabled) ||                                    \
+        (gLog_level.ucix_log_level >= NXPLOG_LOG_DEBUG_LOGLEVEL)) \
+      LOG(INFO) << NXPLOG_ITEM_UCIX << " " << StringPrintf(__VA_ARGS__);  \
+  }
+#define NXPLOG_UCIX_W(...)                                       \
+  {                                                              \
+    if ((uwb_debug_enabled) ||                                   \
+        (gLog_level.ucix_log_level >= NXPLOG_LOG_WARN_LOGLEVEL)) \
+      LOG(WARNING) << NXPLOG_ITEM_UCIX << " " << StringPrintf(__VA_ARGS__);  \
+  }
+#define NXPLOG_UCIX_E(...)                                       \
+  {                                                              \
+    if (gLog_level.ucix_log_level >= NXPLOG_LOG_ERROR_LOGLEVEL)  \
+      LOG(ERROR) << NXPLOG_ITEM_UCIX << " " << StringPrintf(__VA_ARGS__); \
+  }
+#else
+#define NXPLOG_UCIX_D(...)
+#define NXPLOG_UCIX_W(...)
+#define NXPLOG_UCIX_E(...)
+#endif /* Logging APIs used by UCIx module */
+
+/* Logging APIs used by NxpUciR module */
+#if (ENABLE_UCIR_TRACES == TRUE)
+#define NXPLOG_UCIR_D(...)                                        \
+  {                                                               \
+    if ((uwb_debug_enabled) ||                                    \
+        (gLog_level.ucir_log_level >= NXPLOG_LOG_DEBUG_LOGLEVEL)) \
+      LOG(INFO) << NXPLOG_ITEM_UCIR << " " << StringPrintf(__VA_ARGS__);  \
+  }
+#define NXPLOG_UCIR_W(...)                                       \
+  {                                                              \
+    if ((uwb_debug_enabled) ||                                   \
+        (gLog_level.ucir_log_level >= NXPLOG_LOG_WARN_LOGLEVEL)) \
+      LOG(WARNING) << NXPLOG_ITEM_UCIR << " " << StringPrintf(__VA_ARGS__);  \
+  }
+#define NXPLOG_UCIR_E(...)                                       \
+  {                                                              \
+    if (gLog_level.ucir_log_level >= NXPLOG_LOG_ERROR_LOGLEVEL)  \
+      LOG(ERROR) << NXPLOG_ITEM_UCIR << " " << StringPrintf(__VA_ARGS__); \
+  }
+#else
+#define NXPLOG_UCIR_D(...)
+#define NXPLOG_UCIR_W(...)
+#define NXPLOG_UCIR_E(...)
+#endif /* Logging APIs used by UCIR module */
+
+/* Logging APIs used by NxpFwDnld module */
+#if (ENABLE_FWDNLD_TRACES == TRUE)
+#define NXPLOG_FWDNLD_D(...)                                       \
+  {                                                                \
+    if ((uwb_debug_enabled) ||                                     \
+        (gLog_level.dnld_log_level >= NXPLOG_LOG_DEBUG_LOGLEVEL))  \
+      LOG(INFO) << NXPLOG_ITEM_FWDNLD << " " << StringPrintf(__VA_ARGS__); \
+  }
+#define NXPLOG_FWDNLD_W(...)                                      \
+  {                                                               \
+    if ((uwb_debug_enabled) ||                                    \
+        (gLog_level.dnld_log_level >= NXPLOG_LOG_WARN_LOGLEVEL))  \
+      LOG(WARNING) << NXPLOG_ITEM_FWDNLD << " " << StringPrintf(__VA_ARGS__); \
+  }
+#define NXPLOG_FWDNLD_E(...)                                       \
+  {                                                                \
+    if (gLog_level.dnld_log_level >= NXPLOG_LOG_ERROR_LOGLEVEL)    \
+      LOG(ERROR) << NXPLOG_ITEM_FWDNLD << " " << StringPrintf(__VA_ARGS__); \
+  }
+#else
+#define NXPLOG_FWDNLD_D(...)
+#define NXPLOG_FWDNLD_W(...)
+#define NXPLOG_FWDNLD_E(...)
+#endif /* Logging APIs used by NxpFwDnld module */
+
+/* Logging APIs used by NxpTml module */
+#if (ENABLE_TML_TRACES == TRUE)
+#define NXPLOG_TML_D(...)                                        \
+  {                                                              \
+    if ((uwb_debug_enabled) ||                                   \
+        (gLog_level.tml_log_level >= NXPLOG_LOG_DEBUG_LOGLEVEL)) \
+      LOG(INFO) << NXPLOG_ITEM_TML << " " << StringPrintf(__VA_ARGS__);  \
+  }
+#define NXPLOG_TML_W(...)                                       \
+  {                                                             \
+    if ((uwb_debug_enabled) ||                                  \
+        (gLog_level.tml_log_level >= NXPLOG_LOG_WARN_LOGLEVEL)) \
+      LOG(WARNING) << NXPLOG_ITEM_TML << " " << StringPrintf(__VA_ARGS__);  \
+  }
+#define NXPLOG_TML_E(...)                                       \
+  {                                                             \
+    if (gLog_level.tml_log_level >= NXPLOG_LOG_ERROR_LOGLEVEL)  \
+      LOG(ERROR) << NXPLOG_ITEM_TML << " " << StringPrintf(__VA_ARGS__); \
+  }
+#else
+#define NXPLOG_TML_D(...)
+#define NXPLOG_TML_W(...)
+#define NXPLOG_TML_E(...)
+#endif /* Logging APIs used by NxpTml module */
+
+#ifdef NXP_HCI_REQ
+/* Logging APIs used by NxpHcpX module */
+#if (ENABLE_HCPX_TRACES == TRUE)
+#define NXPLOG_HCPX_D(...)                                         \
+  {                                                                \
+    if ((uwb_debug_enabled) ||                                     \
+        (gLog_level.dnld_log_level >= NXPLOG_LOG_DEBUG_LOGLEVEL))  \
+      LOG(INFO) << NXPLOG_ITEM_FWDNLD << " " << StringPrintf(__VA_ARGS__); \
+  }
+#define NXPLOG_HCPX_W(...)                                        \
+  {                                                               \
+    if ((uwb_debug_enabled) ||                                    \
+        (gLog_level.dnld_log_level >= NXPLOG_LOG_WARN_LOGLEVEL))  \
+      LOG(WARNING) << NXPLOG_ITEM_FWDNLD << " " << StringPrintf(__VA_ARGS__); \
+  }
+#define NXPLOG_HCPX_E(...)                                         \
+  {                                                                \
+    if (gLog_level.dnld_log_level >= NXPLOG_LOG_ERROR_LOGLEVEL)    \
+      LOG(ERROR) << NXPLOG_ITEM_FWDNLD << " " << StringPrintf(__VA_ARGS__); \
+  }
+#else
+#define NXPLOG_HCPX_D(...)
+#define NXPLOG_HCPX_W(...)
+#define NXPLOG_HCPX_E(...)
+#endif /* Logging APIs used by NxpHcpX module */
+
+/* Logging APIs used by NxpHcpR module */
+#if (ENABLE_HCPR_TRACES == TRUE)
+#define NXPLOG_HCPR_D(...)                                         \
+  {                                                                \
+    if ((uwb_debug_enabled) ||                                     \
+        (gLog_level.dnld_log_level >= NXPLOG_LOG_DEBUG_LOGLEVEL))  \
+      LOG(INFO) << NXPLOG_ITEM_FWDNLD << " " << StringPrintf(__VA_ARGS__); \
+  }
+#define NXPLOG_HCPR_W(...)                                        \
+  {                                                               \
+    if ((uwb_debug_enabled) ||                                    \
+        (gLog_level.dnld_log_level >= NXPLOG_LOG_WARN_LOGLEVEL))  \
+      LOG(WARNING) << NXPLOG_ITEM_FWDNLD << " " << StringPrintf(__VA_ARGS__); \
+  }
+#define NXPLOG_HCPR_E(...)                                         \
+  {                                                                \
+    if (gLog_level.dnld_log_level >= NXPLOG_LOG_ERROR_LOGLEVEL)    \
+      LOG(ERROR) << NXPLOG_ITEM_FWDNLD << " " << StringPrintf(__VA_ARGS__); \
+  }
+#else
+#define NXPLOG_HCPR_D(...)
+#define NXPLOG_HCPR_W(...)
+#define NXPLOG_HCPR_E(...)
+#endif /* Logging APIs used by NxpHcpR module */
+#endif /* NXP_HCI_REQ */
+
+#endif // OS_CHROMEOS
+
 #ifdef NXP_VRBS_REQ
 #if (ENABLE_EXTNS_TRACES == TRUE)
 #define NXPLOG_EXTNS_ENTRY() NXPLOG_FUNC_ENTRY(NXPLOG_ITEM_EXTNS)
@@ -363,5 +607,7 @@ extern const char* NXPLOG_ITEM_HCPR; /* Android logging tag for NxpHcpR   */
 #endif /* NXP_VRBS_REQ */
 
 void phNxpLog_InitializeLogLevel(void);
-
+#ifdef OS_CHROMEOS
+void phNxpLog_InitializeLogging();
+#endif //OS_CHROMEOS
 #endif /* NXPLOG__H_INCLUDED */

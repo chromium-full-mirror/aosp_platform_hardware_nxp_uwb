@@ -15,8 +15,6 @@
  */
 #include <errno.h>
 #include <pthread.h>
-#include <log/log.h>
-
 #include <phNxpLog.h>
 #include <phNxpUciHal.h>
 #include <phNxpUciHal_utils.h>
@@ -392,14 +390,24 @@ void phNxpUciHal_cleanup_cb_data(phNxpUciHal_Sem_t* pCallbackData) {
 
 void phNxpUciHal_sem_timed_wait(phNxpUciHal_Sem_t* pCallbackData) {
   int ret;
-  struct timespec absTimeout;
-  if (clock_gettime(CLOCK_MONOTONIC, &absTimeout) == -1) {
+  struct timespec timeout;
+#ifdef OS_CHROMEOS
+  if (clock_gettime(CLOCK_REALTIME, &timeout) == -1) {
+#else
+  if (clock_gettime(CLOCK_MONOTONIC, &timeout) == -1) {
+#endif // OS_CHROMEOS
     NXPLOG_UCIHAL_E("clock_gettime failed");
     pCallbackData->status = UWBSTATUS_FAILED;
     return;
   }
-  absTimeout.tv_sec += 1; /*1 second timeout*/
-  while ((ret = sem_timedwait_monotonic_np(&pCallbackData->sem, &absTimeout)) == -1 && errno == EINTR) {
+  timeout.tv_sec += 1; /*1 second timeout*/
+#ifdef OS_CHROMEOS
+  while ((ret = sem_timedwait(&pCallbackData->sem, &timeout))
+    == -1 && errno == EINTR) {
+#else
+  while ((ret = sem_timedwait_monotonic_np(&pCallbackData->sem, &timeout))
+    == -1 && errno == EINTR) {
+#endif // OS_CHROMEOS
     continue;
   }
   if (ret == -1 && errno == ETIMEDOUT) {

@@ -23,12 +23,7 @@
 #include <vector>
 #include <list>
 #include <sys/stat.h>
-#include <android-base/stringprintf.h>
-#include <base/logging.h>
-#include <cutils/properties.h>
-#include  "phNxpLog.h"
-
-using android::base::StringPrintf;
+#include "phNxpLog.h"
 
 extern bool uwb_debug_enabled;
 

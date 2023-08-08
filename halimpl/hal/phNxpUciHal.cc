@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-#include <log/log.h>
 #include <phNxpLog.h>
-#include <cutils/properties.h>
 #include <phNxpUciHal.h>
 #include <phNxpUciHal_Adaptation.h>
 #include <phNxpUciHal_ext.h>
@@ -28,7 +26,6 @@
 #include <vector>
 #include "hal_nxpuwb.h"
 #include "phNxpConfig.h"
-#include <android-base/stringprintf.h>
 #include "phNxpUciHal_utils.h"
 
 #if (NXP_UWB_EXTNS == TRUE)
@@ -36,7 +33,6 @@
 #endif
 
 using namespace std;
-using android::base::StringPrintf;
 
 map<uint16_t, vector<uint16_t>> input_map;
 map<uint16_t, vector<uint16_t>> conf_map;
@@ -309,6 +305,10 @@ tHAL_UWB_STATUS phNxpUciHal_open(uwb_stack_callback_t* p_cback,
     NXPLOG_UCIHAL_E("phNxpUciHal_open already open");
     return UWBSTATUS_SUCCESS;
   }
+
+#ifdef OS_CHROMEOS
+  phNxpLog_InitializeLogging();
+#endif // OS_CHROMEOS
 
   /* initialize trace level */
   phNxpLog_InitializeLogLevel();
@@ -1332,4 +1332,3 @@ static void phNxpUciHal_print_response_status(uint8_t* p_rx_data, uint16_t p_len
     }
   }
 }
-

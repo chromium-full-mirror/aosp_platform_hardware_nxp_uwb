@@ -18,8 +18,6 @@
 #include <stdio.h>
 #include <string.h>
 #include "phNxpLog.h"
-#include <cutils/properties.h>
-#include <log/log.h>
 
 const char* NXPLOG_ITEM_EXTNS = "NxpExtns";
 const char* NXPLOG_ITEM_UCIHAL = "NxpUwbHal";
@@ -268,3 +266,25 @@ void phNxpLog_InitializeLogLevel(void) {
            gLog_level.tml_log_level, gLog_level.ucir_log_level,
            gLog_level.ucix_log_level);
 }
+
+/*******************************************************************************
+ *
+ * Function         phNxpLog_InitializeLogging
+ *
+ * Description      Initializes logging to syslog on ChromeOS
+ *
+ * Returns          void
+ *
+ ******************************************************************************/
+#ifdef OS_CHROMEOS
+void phNxpLog_InitializeLogging(void) {
+  logging::LoggingSettings settings;
+  settings.logging_dest =
+      logging::LOG_TO_SYSTEM_DEBUG_LOG | logging::LOG_TO_STDERR;
+
+  logging::SetMinLogLevel(logging::LOGGING_WARNING);
+  logging::InitLogging(settings);
+
+  brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderrIfTty);
+}
+#endif //OS_CHROMEOS

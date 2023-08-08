@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <log/log.h>
 #include <phNxpUciHal_ext.h>
 #include <phNxpUciHal.h>
 #include <phTmlUwb.h>
@@ -21,7 +20,6 @@
 #include <phNxpLog.h>
 #include <phUwbCommon.h>
 #include <sys/stat.h>
-#include <cutils/properties.h>
 #include "phNxpConfig.h"
 
 #define MAX_PROPERTY_SIZE (PROPERTY_VALUE_MAX)
