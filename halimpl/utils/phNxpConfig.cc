@@ -27,20 +27,24 @@
 
 extern bool uwb_debug_enabled;
 
-#define nxp_config_name             "libuwb-nxp.conf"
 #define uci_config_name             "libuwb-uci.conf"
-
-
-const char alternative_config_path[] = "/vendor/etc/";
-
 #define extra_config_base "libuwb-"
 #define extra_config_ext ".conf"
 
 #define extra_config_ext        ".conf"
 #define     IsStringValue       0x80000000
 
+#if defined(OS_CHROMEOS)
+#define nxp_config_name             "libuwb-nxp-type2gc-es1.conf"
+const char nxp_uci_config_path[] = "/etc/uwb/libuwb-uci.conf";
+const char default_nxp_config_path[] = "/etc/uwb/";
+const char alternative_config_path[] = "/etc/uwb/";
+#else
+#define nxp_config_name             "libuwb-nxp.conf"
 const char nxp_uci_config_path[] = "/vendor/etc/libuwb-uci.conf";
 const char default_nxp_config_path[] = "/vendor/etc/";
+const char alternative_config_path[] = "/vendor/etc/";
+#endif  // !defined(OS_CHROMEOS)
 
 using namespace::std;
 

@@ -42,11 +42,18 @@ using namespace std;
 static uint8_t chip_id = 0x00;
 static uint8_t deviceLcInfo = 0x00;
 static uint8_t is_fw_download_log_enabled = 0x00;
+
+#if defined(OS_CHROMEOS)
+const char* default_prod_fw = "sr150_fw.bin";
+const char* default_dev_fw = "sr150_fw_dev.bin";
+char default_fw_path[FILEPATH_MAXLEN] = "/lib/firmware/nxp/";
+#else
 const char* default_prod_fw = "libsr100t_prod_fw.bin";
 const char* default_dev_fw = "libsr100t_dev_fw.bin";
+char default_fw_path[FILEPATH_MAXLEN] = "/vendor/firmware/uwb/";
+#endif  // !defined(OS_CHROMEOS)
 
 char* configured_fw_name = NULL;
-char default_fw_path[FILEPATH_MAXLEN] = "/vendor/firmware/uwb/";
 /*************************************************************************************/
 /*   LOCAL FUNCTIONS                                                                 */
 /*************************************************************************************/
