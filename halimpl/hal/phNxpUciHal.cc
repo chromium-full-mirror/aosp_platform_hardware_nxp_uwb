@@ -34,6 +34,17 @@
 
 using namespace std;
 
+#define UCI_HEADER_PAYLOAD_LEN_OFFSET 3
+#define UCI_SET_APP_CONFIG_NUM_PARAM_OFFSET 8
+#define UCI_SET_APP_CONFIG_PARAM_OFFSET 9
+#define UCI_PARAM_ID_SUB_SESSION_ID     0x30
+#define UCI_PARAM_VENDOR_SPECIFIC_BEGIN 0xE3
+#define APP_CONFIG_TLV_T_AND_L_SIZE 2
+#define APP_CONFIG_TLV_TYPE_OFFSET 0
+#define APP_CONFIG_TLV_LEN_OFFSET 1
+#define APP_CONFIG_TLV_VAL_OFFSET 2
+#define STS_CONFIG_DYNAMIC 0x02
+
 map<uint16_t, vector<uint16_t>> input_map;
 map<uint16_t, vector<uint16_t>> conf_map;
 
@@ -444,6 +455,129 @@ static void phNxpUciHal_open_complete(tHAL_UWB_STATUS status) {
 }
 
 /******************************************************************************
+ * Function         phNxpUciHal_patch_write
+ *
+ * Description      This function alters the contents of the
+ *                  SESSION_SET_APP_CONFIG command by dropping TLVs that are
+ *                  not supported by the current version of the NXP SoC FW.
+ *
+ * Returns          Number of bytes that were dropped from the message.
+ *
+ ******************************************************************************/
+static uint16_t phNxpUciHal_patch_write(uint16_t data_len,
+                    const uint8_t* p_data, uint16_t *out_len,
+                    const uint8_t** out_data)
+{
+  uint8_t mt = (p_data[0] & UCI_MT_MASK) >> UCI_MT_SHIFT;
+  uint8_t gid = p_data[0] & UCI_GID_MASK;
+  uint8_t oid = p_data[1] & UCI_OID_MASK;
+  static uint8_t buff[UCI_MAX_DATA_LEN];
+  int num_android_ext_app_id = 0;
+  uint8_t device_type = 0xFF, sts_config = 0xFF;
+  bool sub_session_tlv_present = false;
+  bool remove_sub_session_tlv = false;
+
+  *out_len = data_len;
+  *out_data = p_data;
+
+  if (data_len > sizeof(buff))
+    return 0;
+
+
+  // - Fira: 0xE0-0xE2=Extension IDs, E3-FF=Vendor-Specifics
+  // - NXP:
+  //   - defines 0xE3 as Vendor-specific Extension IDs
+  //   - SUB_SESSION_ID(0x30) should be specified only when
+  //     STS_CONFIG=Dynamic && Device role is Controlee
+  // - Android: defines 0xE3-0xE7 as Android specific IDs,
+  //   which are not supported by NXP
+  //
+  // Drop SUB_SESSION_ID when STS_CONFIG != 2 || DEVICE_TYPE != 0
+  // and all IDs >= 0xE3
+  if (mt == UCI_MT_CMD && gid == UCI_GID_SESSION_MANAGE &&
+      oid == UCI_MSG_SESSION_SET_APP_CONFIG &&
+      data_len > UCI_SET_APP_CONFIG_PARAM_OFFSET) {
+    uint8_t num_app_config_tlvs, app_config_type, app_config_len;
+    int src, dst;
+
+    // First scan for the occurrence of APP Config IDs of interest
+    src = UCI_SET_APP_CONFIG_PARAM_OFFSET;
+    while (src < data_len) {
+      app_config_type = p_data[src + APP_CONFIG_TLV_TYPE_OFFSET];
+      app_config_len = p_data[src + APP_CONFIG_TLV_LEN_OFFSET];
+
+      // Check whether the TLV being parsed is within bounds
+      if ((src + app_config_len + APP_CONFIG_TLV_T_AND_L_SIZE)
+            > data_len) {
+        NXPLOG_UCIHAL_E("Failed to Patch SESSION_APP_CONFIG_CMD\n");
+        return 0;
+      }
+
+      if (app_config_type == UCI_PARAM_ID_DEVICE_ROLE &&
+          app_config_len == UCI_PARAM_LEN_DEVICE_ROLE) {
+        device_type = p_data[src + APP_CONFIG_TLV_VAL_OFFSET];
+      } else if (app_config_type == UCI_PARAM_ID_STS_CONFIG &&
+                 app_config_len == UCI_PARAM_LEN_STS_CONFIG) {
+        sts_config = p_data[src + APP_CONFIG_TLV_VAL_OFFSET];
+      } else if (app_config_type == UCI_PARAM_ID_SUB_SESSION_ID) {
+        sub_session_tlv_present = true;
+      } else if (app_config_type >= UCI_PARAM_VENDOR_SPECIFIC_BEGIN) {
+        num_android_ext_app_id++;
+      }
+      src += (app_config_len + APP_CONFIG_TLV_T_AND_L_SIZE);
+    }
+
+    if (src != data_len) {
+        NXPLOG_UCIHAL_E("Failed to Patch SESSION_APP_CONFIG_CMD\n");
+        return 0;
+    }
+
+    remove_sub_session_tlv = ((device_type != UWB_CONTROLLER) ||
+                              (sts_config != STS_CONFIG_DYNAMIC))
+                              && sub_session_tlv_present;
+
+    if (!num_android_ext_app_id && !remove_sub_session_tlv) {
+      return 0;
+    }
+
+    // Build the patched message in the buffer.
+    // First, copy the header, number of app configs and session ID
+    memcpy(buff, p_data, UCI_SET_APP_CONFIG_PARAM_OFFSET);
+
+    src = dst = UCI_SET_APP_CONFIG_PARAM_OFFSET;
+    num_app_config_tlvs = 0;
+
+    while (src < data_len) {
+      app_config_type = p_data[src + APP_CONFIG_TLV_TYPE_OFFSET];
+      app_config_len = p_data[src + APP_CONFIG_TLV_LEN_OFFSET];
+
+      if ((app_config_type >= UCI_PARAM_VENDOR_SPECIFIC_BEGIN) ||
+          (app_config_type == UCI_PARAM_ID_SUB_SESSION_ID &&
+           remove_sub_session_tlv)) {
+        NXPLOG_UCIHAL_D("Patch SESSION_APP_CONFIG_CMD: dropped 0x%x",
+                         app_config_type);
+      } else {
+        memcpy(&buff[dst], &p_data[src],
+              (APP_CONFIG_TLV_T_AND_L_SIZE + app_config_len));
+        num_app_config_tlvs++;
+        dst += (APP_CONFIG_TLV_T_AND_L_SIZE + app_config_len);
+      }
+      src += (APP_CONFIG_TLV_T_AND_L_SIZE + app_config_len);
+    }
+
+    // Update the payload length in the UCI header
+    buff[UCI_HEADER_PAYLOAD_LEN_OFFSET] = dst - UCI_MSG_HDR_SIZE;
+
+    // Update the number of TLVs
+    buff[UCI_SET_APP_CONFIG_NUM_PARAM_OFFSET] = num_app_config_tlvs;
+
+    phNxpUciHal_print_packet("SEND", p_data, data_len);
+    *out_len = dst;
+    *out_data = buff;
+  }
+  return (uint16_t)(data_len - *out_len);
+}
+/******************************************************************************
  * Function         phNxpUciHal_write
  *
  * Description      This function write the data to UWBC through physical
@@ -456,16 +590,24 @@ static void phNxpUciHal_open_complete(tHAL_UWB_STATUS status) {
  *
  ******************************************************************************/
 tHAL_UWB_STATUS phNxpUciHal_write(uint16_t data_len, const uint8_t* p_data) {
+  uint16_t patched_msg_len;
+  const uint8_t *patched_msg_buff;
+  uint16_t bytes_written = 0;
+  uint16_t bytes_dropped = 0;
+
   if (nxpucihal_ctrl.halStatus != HAL_STATUS_OPEN) {
     return UWBSTATUS_FAILED;
   }
 
+  bytes_dropped = phNxpUciHal_patch_write(data_len, p_data,
+                                           &patched_msg_len, &patched_msg_buff);
+
   CONCURRENCY_LOCK();
-  uint16_t len = phNxpUciHal_write_unlocked(data_len, p_data);
+  bytes_written = phNxpUciHal_write_unlocked(patched_msg_len, patched_msg_buff);
   CONCURRENCY_UNLOCK();
 
   /* No data written */
-  return len;
+  return (bytes_written + bytes_dropped);
 }
 
 /******************************************************************************
