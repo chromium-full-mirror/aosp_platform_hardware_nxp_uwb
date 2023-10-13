@@ -17,16 +17,14 @@
  ******************************************************************************/
 #ifndef ANDROID_HARDWARE_HAL_NXPUWB_V1_0_H
 #define ANDROID_HARDWARE_HAL_NXPUWB_V1_0_H
-#include <vector>
-#include <string>
 
-enum {
+enum UWB_EVT_STATUS {
   HAL_UWB_STATUS_OK = 0x00,
   HAL_UWB_STATUS_ERR_TRANSPORT = 0x01,
   HAL_UWB_STATUS_ERR_CMD_TIMEOUT = 0x02
 };
 
-enum {
+enum UWB_EVT {
   HAL_UWB_OPEN_CPLT_EVT = 0x00,
   HAL_UWB_CLOSE_CPLT_EVT = 0x01,
   HAL_UWB_INIT_CPLT_EVT = 0x02,
