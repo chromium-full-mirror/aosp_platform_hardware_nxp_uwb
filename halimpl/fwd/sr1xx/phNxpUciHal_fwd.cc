@@ -183,7 +183,7 @@ phHbci_Status_t phHbci_GeneralStatus(phHbci_General_Command_t mode)
     ALOGD("phHbci_GeneralStatus Enter\n");
     switch (gphHbci_MisoApdu.cls)
     {
-    case phHbci_Class_General | phHbci_SubClass_Answer:
+    case (uint8_t)phHbci_Class_General | (uint8_t)phHbci_SubClass_Answer:
         switch (gphHbci_MisoApdu.ins)
         {
         case phHbci_General_Ans_HBCI_Ready:
@@ -235,7 +235,7 @@ phHbci_Status_t phHbci_GeneralStatus(phHbci_General_Command_t mode)
         }
         break;
 
-    case phHbci_Class_General | phHbci_SubClass_Ack:
+    case (uint8_t)phHbci_Class_General | (uint8_t)phHbci_SubClass_Ack:
         switch (gphHbci_MisoApdu.ins)
         {
         case phHbci_Invlaid_Class:
@@ -303,7 +303,8 @@ phHbci_Status_t phHbci_QueryInfo(uint8_t *pInfo, uint32_t *pInfoSz, uint32_t max
         }
     }
 
-    gphHbci_MosiApdu.cls = (uint8_t)(phHbci_Class_General | phHbci_SubClass_Ack);
+    gphHbci_MosiApdu.cls = (uint8_t)phHbci_Class_General |
+                            (uint8_t)phHbci_SubClass_Ack;
     gphHbci_MosiApdu.ins = (uint8_t)phHbci_Valid_APDU;
 
     if (gphHbci_MisoApdu.cls != expCls)
@@ -362,7 +363,8 @@ phHbci_Status_t phHbci_QueryInfo(uint8_t *pInfo, uint32_t *pInfoSz, uint32_t max
 phHbci_Status_t phHbci_GetGeneralInfo(uint8_t *pInfo, uint32_t *pInfoSz)
 {
     ALOGD("phHbci_GetGeneralInfo\n");
-    if (gphHbci_MosiApdu.cls != (uint8_t)(phHbci_Class_General | phHbci_SubClass_Query))
+    if (gphHbci_MosiApdu.cls != ((uint8_t)phHbci_Class_General |
+                                (uint8_t)phHbci_SubClass_Query))
     {
         ALOGD("ERROR: Invalid General Info Class = 0x%02x\n", gphHbci_MosiApdu.cls);
         return phHbci_Failure;
@@ -400,7 +402,7 @@ phHbci_Status_t phHbci_GetInfo(uint8_t *pInfo, uint32_t *pInfoSz)
     ALOGD("phHbci_GetInfo Enter\n");
     switch (gphHbci_MosiApdu.cls)
     {
-    case phHbci_Class_General | phHbci_SubClass_Query:
+    case (uint8_t)phHbci_Class_General | (uint8_t)phHbci_SubClass_Query:
         return phHbci_GetGeneralInfo(pInfo, pInfoSz);
         break;
 
@@ -419,7 +421,7 @@ phHbci_Status_t phHbci_PutCommand(uint8_t *pImg, uint32_t imgSz)
     uint16_t            lrc, dataSz, payloadSz;
     phHbci_Status_t     ret = phHbci_Failure;
 
-    ackCls = (uint8_t)(phHbci_Class_General | phHbci_SubClass_Ack);
+    ackCls = (uint8_t)phHbci_Class_General | (uint8_t)phHbci_SubClass_Ack;
     ackIns = (uint8_t)phHbci_Valid_APDU;
 
     do
@@ -497,7 +499,8 @@ static phHbci_Status_t phHbci_MasterPatchROM(uint8_t *pImg, uint32_t imgSz)
     ALOGD("phHbci_MasterPatchROM enter");
     phHbci_Status_t ret = phHbci_Failure;
 
-    gphHbci_MosiApdu.cls = (uint8_t)(phHbci_Class_General | phHbci_SubClass_Query);
+    gphHbci_MosiApdu.cls = (uint8_t)phHbci_Class_General |
+                            (uint8_t)phHbci_SubClass_Query;
     gphHbci_MosiApdu.ins = (uint8_t)phHbci_General_Qry_Status;
 
     while (1)
@@ -509,14 +512,15 @@ static phHbci_Status_t phHbci_MasterPatchROM(uint8_t *pImg, uint32_t imgSz)
 
         switch (gphHbci_MisoApdu.cls)
         {
-        case phHbci_Class_General | phHbci_SubClass_Answer:
-        case phHbci_Class_General | phHbci_SubClass_Ack:
+        case (uint8_t)phHbci_Class_General | (uint8_t)phHbci_SubClass_Answer:
+        case (uint8_t)phHbci_Class_General | (uint8_t)phHbci_SubClass_Ack:
             if (phHbci_Success != (ret = phHbci_GeneralStatus(phHbci_General_Cmd_Mode_Patch_ROM)))
             {
                 return ret;
             }
 
-            gphHbci_MosiApdu.cls = (uint8_t)(phHbci_Class_Patch_ROM | phHbci_SubClass_Command);
+            gphHbci_MosiApdu.cls = (uint8_t)phHbci_Class_Patch_ROM |
+                                    (uint8_t)phHbci_SubClass_Command;
             gphHbci_MosiApdu.ins = (uint8_t)phHbci_Patch_ROM_Cmd_Download_Patch;
 
             /* Reset GPIO event flag */
@@ -533,11 +537,12 @@ static phHbci_Status_t phHbci_MasterPatchROM(uint8_t *pImg, uint32_t imgSz)
                 ALOGD("ERROR: GPIO notification timeout!\n");
             }*/
 
-            gphHbci_MosiApdu.cls = (uint8_t)(phHbci_Class_Patch_ROM | phHbci_SubClass_Query);
+            gphHbci_MosiApdu.cls = (uint8_t)phHbci_Class_Patch_ROM |
+                                    (uint8_t)phHbci_SubClass_Query;
             gphHbci_MosiApdu.ins = (uint8_t)phHbci_Patch_ROM_Qry_Patch_Status;
             break;
 
-        case phHbci_Class_Patch_ROM | phHbci_SubClass_Answer:
+        case (uint8_t)phHbci_Class_Patch_ROM | (uint8_t)phHbci_SubClass_Answer:
             switch (gphHbci_MisoApdu.ins)
             {
             case phHbci_Patch_ROM_Ans_Patch_Success:
@@ -577,7 +582,8 @@ static phHbci_Status_t phHbci_MasterHIFImage(uint8_t *pImg, uint32_t imgSz)
     ALOGD("phHbci_MasterHIFImage enter");
     phHbci_Status_t ret = phHbci_Failure;
 
-    gphHbci_MosiApdu.cls = (uint8_t)(phHbci_Class_General | phHbci_SubClass_Query);
+    gphHbci_MosiApdu.cls = (uint8_t)phHbci_Class_General |
+                            (uint8_t)phHbci_SubClass_Query;
     gphHbci_MosiApdu.ins = (uint8_t)phHbci_General_Qry_Status;
 
     while (1)
@@ -589,14 +595,15 @@ static phHbci_Status_t phHbci_MasterHIFImage(uint8_t *pImg, uint32_t imgSz)
 
         switch (gphHbci_MisoApdu.cls)
         {
-        case phHbci_Class_General | phHbci_SubClass_Answer:
-        case phHbci_Class_General | phHbci_SubClass_Ack:
+        case (uint8_t)phHbci_Class_General | (uint8_t)phHbci_SubClass_Answer:
+        case (uint8_t)phHbci_Class_General | (uint8_t)phHbci_SubClass_Ack:
             if (phHbci_Success != (ret = phHbci_GeneralStatus(phHbci_General_Cmd_Mode_HIF_Image)))
             {
                 return ret;
             }
 
-            gphHbci_MosiApdu.cls = (uint8_t)(phHbci_Class_HIF_Image | phHbci_SubClass_Command);
+            gphHbci_MosiApdu.cls = (uint8_t)phHbci_Class_HIF_Image |
+                                    (uint8_t)phHbci_SubClass_Command;
             gphHbci_MosiApdu.ins = (uint8_t)phHbci_HIF_Image_Cmd_Download_Image;
 
             /* Reset GPIO event flag */
@@ -614,11 +621,12 @@ static phHbci_Status_t phHbci_MasterHIFImage(uint8_t *pImg, uint32_t imgSz)
             }*/
             usleep(100000);
 
-            gphHbci_MosiApdu.cls = (uint8_t)(phHbci_Class_HIF_Image | phHbci_SubClass_Query);
+            gphHbci_MosiApdu.cls = (uint8_t)phHbci_Class_HIF_Image |
+                                    (uint8_t)phHbci_SubClass_Query;
             gphHbci_MosiApdu.ins = (uint8_t)phHbci_HIF_Image_Qry_Image_Status;
             break;
 
-        case phHbci_Class_HIF_Image | phHbci_SubClass_Answer:
+        case (uint8_t)phHbci_Class_HIF_Image | (uint8_t)phHbci_SubClass_Answer:
             switch (gphHbci_MisoApdu.ins)
             {
             case phHbci_HIF_Image_Ans_Image_Success:
@@ -675,7 +683,8 @@ phHbci_Status_t phHbci_Master(phHbci_General_Command_t mode, uint8_t *pImg, uint
 //    uint32_t            infoSz = 0;
     phHbci_Status_t     ret = phHbci_Failure;
 
-    gphHbci_MosiApdu.cls = (uint8_t)(phHbci_Class_General | phHbci_SubClass_Query);
+    gphHbci_MosiApdu.cls = (uint8_t)phHbci_Class_General |
+                            (uint8_t)phHbci_SubClass_Query;
     gphHbci_MosiApdu.ins = (uint8_t)phHbci_General_Qry_Status;
 
     if (phHbci_Success != (ret = phHbci_GetStatus()))
@@ -688,7 +697,8 @@ phHbci_Status_t phHbci_Master(phHbci_General_Command_t mode, uint8_t *pImg, uint
         return ret;
     }
 
-    gphHbci_MosiApdu.cls = (uint8_t)(phHbci_Class_General | phHbci_SubClass_Command);
+    gphHbci_MosiApdu.cls = (uint8_t)phHbci_Class_General |
+                            (uint8_t)phHbci_SubClass_Command;
     gphHbci_MosiApdu.ins = (uint8_t)mode;
     ALOGD("STARTING FW DOWNLOAD.....\n");
     if (phHbci_Success != (ret = phHbci_PutCommand(pImg, 0)))
@@ -837,7 +847,8 @@ phHbci_Status_t phHbci_GetChipIdInfo(){
     uint16_t totalBtyesToRead = 0;
     uint8_t hbciData[PHHBCI_MAX_LEN_PAYLOAD_MISO];
 
-    gphHbci_MosiApdu.cls = (uint8_t)(phHbci_Class_General | phHbci_SubClass_Query);
+    gphHbci_MosiApdu.cls = (uint8_t)phHbci_Class_General |
+                            (uint8_t)phHbci_SubClass_Query;
     gphHbci_MosiApdu.ins = (uint8_t)phHbci_General_Qry_Chip_ID;
 
     gphHbci_MosiApdu.len = 0;
@@ -892,7 +903,8 @@ phHbci_Status_t phHbci_GetDeviceLcInfo(){
     uint16_t totalBtyesToRead = 0;
     uint8_t hbciData[PHHBCI_MAX_LEN_PAYLOAD_MISO];
 
-    gphHbci_MosiApdu.cls = (uint8_t)(phHbci_Class_General | phHbci_SubClass_Query);
+    gphHbci_MosiApdu.cls = (uint8_t)phHbci_Class_General |
+                            (uint8_t)phHbci_SubClass_Query;
     gphHbci_MosiApdu.ins = (uint8_t)phHbci_General_Qry_OTP_AutoLoad_Info;
 
     gphHbci_MosiApdu.len = 0;
